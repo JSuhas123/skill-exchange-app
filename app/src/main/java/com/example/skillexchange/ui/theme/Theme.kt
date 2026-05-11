@@ -89,6 +89,7 @@ fun SkillExchangeTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = SkillExchangeShapes,
         content = content
     )
 }

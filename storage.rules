@@ -1,0 +1,29 @@
+// Firebase Storage Rules for SkillExchange
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload profile images
+    match /profile_images/{userId}/{filename} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+        request.auth.uid == userId &&
+        request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+        request.resource.contentType.matches('image/.*');
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload skill images
+    match /skill_images/{filename} {
+      allow read: if request.auth != null;
+      allow create: if false; // Only admin can create
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    // Default deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

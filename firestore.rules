@@ -1,0 +1,99 @@
+// Firestore Security Rules for SkillExchange
+// Deploy via Firebase Console or Firebase CLI: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write for authenticated users
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isInArray(userId, array) {
+      return userId in array;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasAll(['id', 'name', 'email', 'skillsOffered', 'skillsNeeded']) &&
+        request.resource.data.id == userId &&
+        request.resource.data.trustScore >= 0 &&
+        request.resource.data.skillPoints >= 0;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Skills collection
+    match /skills/{skillId} {
+      allow read: if isSignedIn();
+      allow create: if false; // Only admin can create skills
+      allow update: if false; // Only admin can update
+      allow delete: if false; // Only admin can delete
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'skillRequired', 'skillOffered', 'description']);
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Swaps collection
+    match /swaps/{swapId} {
+      allow read: if isSignedIn() && 
+        isInArray(request.auth.uid, resource.data.users);
+      allow create: if isSignedIn() && 
+        request.resource.data.userA == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userA', 'userB', 'users', 'skillA', 'skillB', 'hours', 'status']) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.hours > 0 &&
+        request.resource.data.hours <= 168;
+      allow update: if isSignedIn() && 
+        isInArray(request.auth.uid, resource.data.users) &&
+        (request.resource.data.status in ['pending', 'accepted', 'completed', 'cancelled']) &&
+        (!('userA' in request.writeFields || 'userB' in request.writeFields || 'users' in request.writeFields));
+      allow delete: if false; // Don't allow deletion of swaps
+    }
+    
+    // Messages collection (thread structure)
+    match /messages/{threadId}/messages/{messageId} {
+      allow read: if isSignedIn() && 
+        threadId.split('_').hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && 
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['senderId', 'text']) &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 5000;
+      allow update: if false; // Messages cannot be updated
+      allow delete: if isOwner(resource.data.senderId);
+    }
+    
+    // Exchange requests collection
+    match /exchangeRequests/{requestId} {
+      allow read: if isSignedIn() && 
+        (isOwner(resource.data.fromUserId) || isOwner(resource.data.toUserId));
+      allow create: if isSignedIn() && 
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.keys().hasAll(['fromUserId', 'toUserId', 'skillId', 'status']);
+      allow update: if isSignedIn() && 
+        isOwner(resource.data.toUserId) &&
+        request.resource.data.status in ['pending', 'accepted', 'rejected'];
+      allow delete: if isOwner(resource.data.fromUserId) || isOwner(resource.data.toUserId);
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -7,37 +7,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.skillexchange.data.model.Post
 import com.example.skillexchange.data.model.Skill
 
+/**
+ * Backward compatibility: PremiumPostCard mapped to new PostCard
+ */
 @Composable
-fun PremiumButton(
-    text: String,
-    onClick: () -> Unit,
+fun PremiumPostCard(
+    post: Post,
+    onChatClick: () -> Unit,
+    onSwapClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: (@Composable () -> Unit)? = null,
-    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+    isOwnPost: Boolean = false,
+    isSwapLoading: Boolean = false,
+    userName: String = "User"
 ) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(52.dp),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.large,
-        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-    ) {
-        if (icon != null) {
-            icon()
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-    }
+    PostCard(
+        post = post,
+        onChatClick = onChatClick,
+        onSwapClick = onSwapClick,
+        modifier = modifier,
+        isOwnPost = isOwnPost,
+        isSwapLoading = isSwapLoading,
+        userName = userName
+    )
 }
 
+/**
+ * Backward compatibility: PremiumSkillCard mapped to new SkillCard
+ */
 @Composable
 fun PremiumSkillCard(
     skill: Skill,
@@ -45,56 +44,61 @@ fun PremiumSkillCard(
     modifier: Modifier = Modifier,
     actionText: String = "Request"
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = skill.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = skill.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (skill.category.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text(skill.category, style = MaterialTheme.typography.labelSmall) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                        ),
-                        border = null
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(
-                onClick = onActionClick,
-                shape = MaterialTheme.shapes.medium,
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                Text(actionText)
-            }
-        }
-    }
+    SkillCard(
+        skill = skill,
+        onActionClick = onActionClick,
+        modifier = modifier,
+        actionText = actionText
+    )
 }
 
 @Composable
 fun LoadingScreen() {
     FullScreenLoading()
+}
+
+/**
+ * Search bar component with Material 3 styling
+ */
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Search skills, users...",
+    onClear: (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+        leadingIcon = {
+            Icon(
+                imageVector = androidx.compose.material.icons.filled.Search,
+                contentDescription = "Search",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        trailingIcon = if (query.isNotEmpty() && onClear != null) {
+            {
+                IconButton(onClick = onClear) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.filled.Clear,
+                        contentDescription = "Clear",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else null,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        ),
+        textStyle = MaterialTheme.typography.bodyMedium
+    )
 }
