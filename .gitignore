@@ -23,5 +23,8 @@ app/google-services.json
 .env.production.local
 *.jks
 *.keystore
-*service-account*.json
-*firebase-adminsdk*.json
+*.p12
+*.pfx
+service-account*.json
+*-service-account.json
+firebase-adminsdk*.json
