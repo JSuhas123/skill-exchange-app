@@ -74,12 +74,12 @@ class CreatePostViewModel @Inject constructor(
                             Timber.d("Post created successfully")
                         }
                         .onFailure { e ->
-                            _uiState.value = Resource.Error(e.message ?: "Failed to create post", e)
+                            _uiState.value = Resource.Error(e.message ?: "Failed to create post")
                             Timber.e(e, "Failed to create post")
                         }
                 }
                 .onFailure { e ->
-                    _uiState.value = Resource.Error(e.message ?: "Failed to fetch user info", e)
+                    _uiState.value = Resource.Error(e.message ?: "Failed to fetch user info")
                     Timber.e(e, "Failed to fetch user info")
                 }
         }

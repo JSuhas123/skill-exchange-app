@@ -61,7 +61,7 @@ class ProfileViewModel @Inject constructor(
                         }
                     }
                     .onFailure { e ->
-                        _uiState.value = Resource.Error(e.message ?: "Failed to load profile", e)
+                        _uiState.value = Resource.Error(e.message ?: "Failed to load profile")
                         Timber.e(e, "Failed to load user profile")
                     }
             }
@@ -112,7 +112,7 @@ class ProfileViewModel @Inject constructor(
                     Timber.d("Profile saved successfully")
                 }
                 .onFailure { e ->
-                    _saveStatus.value = Resource.Error(e.message ?: "Failed to save profile", e)
+                    _saveStatus.value = Resource.Error(e.message ?: "Failed to save profile")
                     Timber.e(e, "Failed to save profile")
                 }
         }
@@ -129,7 +129,7 @@ class ProfileViewModel @Inject constructor(
                     Timber.d("Profile image uploaded successfully")
                 }
                 .onFailure { e ->
-                    _uploadStatus.value = Resource.Error(e.message ?: "Failed to upload image", e)
+                    _uploadStatus.value = Resource.Error(e.message ?: "Failed to upload image")
                     Timber.e(e, "Failed to upload profile image")
                 }
         }

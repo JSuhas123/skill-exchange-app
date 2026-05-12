@@ -95,7 +95,7 @@ class SwapViewModel @Inject constructor(
                     Timber.d("Swap initiated successfully")
                 }
                 .onFailure { e ->
-                    _actionStatus.value = Resource.Error(e.message ?: "Failed to propose swap", e)
+                    _actionStatus.value = Resource.Error(e.message ?: "Failed to propose swap")
                     Timber.e(e, "Failed to initiate swap")
                 }
                 .also { removePendingAction(userB) }
@@ -115,7 +115,7 @@ class SwapViewModel @Inject constructor(
                     Timber.d("Swap accepted successfully")
                 }
                 .onFailure { e ->
-                    _actionStatus.value = Resource.Error(e.message ?: "Failed to accept swap", e)
+                    _actionStatus.value = Resource.Error(e.message ?: "Failed to accept swap")
                     Timber.e(e, "Failed to accept swap")
                 }
                 .also { removePendingAction(swapId) }
@@ -151,7 +151,7 @@ class SwapViewModel @Inject constructor(
                         Timber.d("Swap completion confirmed successfully")
                     }
                     .onFailure { e ->
-                        _actionStatus.value = Resource.Error(e.message ?: "Failed to confirm completion", e)
+                        _actionStatus.value = Resource.Error(e.message ?: "Failed to confirm completion")
                         Timber.e(e, "Failed to confirm completion")
                     }
             } else {
@@ -176,7 +176,7 @@ class SwapViewModel @Inject constructor(
                     Timber.d("Swap cancelled successfully")
                 }
                 .onFailure { e ->
-                    _actionStatus.value = Resource.Error(e.message ?: "Failed to cancel swap", e)
+                    _actionStatus.value = Resource.Error(e.message ?: "Failed to cancel swap")
                     Timber.e(e, "Failed to cancel swap")
                 }
                 .also { removePendingAction(swapId) }

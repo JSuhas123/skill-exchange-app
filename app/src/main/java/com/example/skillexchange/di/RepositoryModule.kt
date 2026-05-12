@@ -1,5 +1,7 @@
 package com.example.skillexchange.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.example.skillexchange.data.repository.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,7 +18,11 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(auth: FirebaseAuth): AuthRepository = AuthRepository(auth)
+    fun provideAuthRepository(
+        auth: FirebaseAuth,
+        firestore: FirebaseFirestore,
+        dataStore: DataStore<Preferences>
+    ): AuthRepository = AuthRepository(auth, firestore, dataStore)
 
     @Provides
     @Singleton
@@ -45,4 +51,11 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideSwapRepository(firestore: FirebaseFirestore): SwapRepository = SwapRepository(firestore)
+
+    @Provides
+    @Singleton
+    fun provideProfileRepository(
+        firestore: FirebaseFirestore,
+        storage: FirebaseStorage
+    ): ProfileRepository = ProfileRepository(firestore, storage)
 }

@@ -87,6 +87,7 @@ fun SearchScreen(viewModel: SearchViewModel = hiltViewModel()) {
                             }
                         }
                     }
+                    is Resource.Idle -> {}
                 }
             }
         }

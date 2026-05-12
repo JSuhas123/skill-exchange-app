@@ -3,8 +3,9 @@ package com.example.skillexchange.data.repository
 import com.example.skillexchange.data.model.User
 import com.example.skillexchange.utils.ErrorHandler
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 import javax.inject.Inject
@@ -25,25 +26,29 @@ class UserRepository @Inject constructor(
         Timber.e(e, "Failed to fetch user: $userId")
     }
     
-    fun getUserFlow(userId: String): Flow<Result<User?>> = flow {
+    fun getUserFlow(userId: String): Flow<Result<User?>> = callbackFlow {
         try {
             val listener = usersCollection.document(userId)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to listen to user: $userId")
-                        emit(Result.failure(error))
+                        trySend(Result.failure(error))
                         return@addSnapshotListener
                     }
                     
                     snapshot?.let {
                         val user = it.toObject(User::class.java)
                         Timber.d("User snapshot updated: $userId")
-                        emit(Result.success(user))
+                        trySend(Result.success(user))
                     }
                 }
+            awaitClose {
+                listener.remove()
+            }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up user listener")
-            emit(Result.failure(e))
+            trySend(Result.failure(e))
+            close(e)
         }
     }
 

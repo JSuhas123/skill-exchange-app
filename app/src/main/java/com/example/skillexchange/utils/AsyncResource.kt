@@ -25,7 +25,7 @@ fun <T> AsyncResource<T>.isRetryable(): Boolean {
 
 fun <T, R> AsyncResource<T>.map(transform: (T) -> R): AsyncResource<R> {
     return when (this) {
-        is AsyncResource.Success -> AsyncResource.Success(transform(data))
+        is AsyncResource.Success -> AsyncResource.Success(transform(data!!))
         is AsyncResource.Error -> AsyncResource.Error(message ?: "", throwable)
         is AsyncResource.Loading -> AsyncResource.Loading()
         is AsyncResource.Idle -> AsyncResource.Idle()
@@ -34,7 +34,7 @@ fun <T, R> AsyncResource<T>.map(transform: (T) -> R): AsyncResource<R> {
 
 fun <T> AsyncResource<T>.onSuccess(block: (T) -> Unit): AsyncResource<T> {
     if (this is AsyncResource.Success) {
-        block(data)
+        block(data!!)
     }
     return this
 }
@@ -59,7 +59,7 @@ fun <T> AsyncResource<T>.getOrNull(): T? = when (this) {
 }
 
 fun <T> AsyncResource<T>.getOrThrow(): T = when (this) {
-    is AsyncResource.Success -> data
+    is AsyncResource.Success -> data!!
     is AsyncResource.Error -> throw Exception(message, throwable)
     else -> throw IllegalStateException("Resource is not in Success state")
 }

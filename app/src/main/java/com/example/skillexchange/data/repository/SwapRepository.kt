@@ -30,7 +30,7 @@ class SwapRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync swaps for user $userId")
-                        trySend(Resource.Error(error.message ?: "Failed to sync swaps", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync swaps"))
                         return@addSnapshotListener
                     }
                     snapshot?.let {
@@ -45,7 +45,8 @@ class SwapRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up swap listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
 
@@ -165,4 +166,3 @@ class SwapRepository @Inject constructor(
         Timber.e(e, "Failed to accept swap")
     }
 }
-

@@ -29,7 +29,12 @@ fun SkillExchangeNavGraph(
             })
         }
         composable(Screen.Dashboard.route) {
-            DashboardScreen()
+            DashboardScreen(
+                onNavigateToSkillBoard = { navController.navigate(Screen.SkillBoard.route) },
+                onNavigateToCreatePost = { navController.navigate(Screen.CreatePost.route) },
+                onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
+                onNavigateToChat = { navController.navigate(Screen.Chat.createRoute("")) }
+            )
         }
         composable(Screen.SkillBoard.route) {
             SkillBoardScreen(
@@ -44,7 +49,7 @@ fun SkillExchangeNavGraph(
             SearchScreen()
         }
         composable(Screen.CreatePost.route) {
-            CreatePostScreen(onPostCreated = {
+            CreatePostScreen(onSuccess = {
                 navController.navigate(Screen.SkillBoard.route) {
                     popUpTo(Screen.CreatePost.route) { inclusive = true }
                 }
@@ -54,7 +59,7 @@ fun SkillExchangeNavGraph(
             SwapScreen()
         }
         composable(Screen.Profile.route) {
-            ProfileScreen(onLogout = {
+            ProfileScreen(onSignOut = {
                 navController.navigate(Screen.Login.route) {
                     popUpTo(0) { inclusive = true }
                 }
@@ -65,7 +70,10 @@ fun SkillExchangeNavGraph(
             arguments = listOf(navArgument("chatId") { type = NavType.StringType })
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
-            ChatScreen(chatId = chatId)
+            ChatScreen(
+                threadId = chatId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

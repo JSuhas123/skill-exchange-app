@@ -79,6 +79,7 @@ fun HomeScreen(viewModel: SkillViewModel = hiltViewModel()) {
                         }
                     }
                 }
+                is Resource.Idle -> {}
             }
         }
     }

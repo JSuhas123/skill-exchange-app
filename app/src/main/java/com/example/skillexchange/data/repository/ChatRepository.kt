@@ -29,7 +29,7 @@ class ChatRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync messages for thread $threadId")
-                        trySend(Resource.Error(error.message ?: "Failed to sync messages", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync messages"))
                         return@addSnapshotListener
                     }
                     
@@ -47,7 +47,8 @@ class ChatRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up message listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
 

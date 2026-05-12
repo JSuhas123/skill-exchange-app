@@ -71,6 +71,7 @@ fun SwapScreen(
                     message = state.message ?: "Database Sync Issue",
                     onRetry = { viewModel.fetchSwaps() }
                 )
+                is Resource.Idle -> {}
                 is Resource.Success -> {
                     val swaps = state.data ?: emptyList()
                     if (swaps.isEmpty()) {

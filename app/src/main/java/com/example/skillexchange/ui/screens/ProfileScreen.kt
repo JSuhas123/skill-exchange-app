@@ -1,57 +1,54 @@
 package com.example.skillexchange.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.skillexchange.data.model.User
-import com.example.skillexchange.ui.components.FullScreenLoading
+import com.example.skillexchange.ui.components.*
 import com.example.skillexchange.utils.Resource
 import com.example.skillexchange.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    viewModel: ProfileViewModel = hiltViewModel(),
-    onLogout: () -> Unit = {}
+    onSignOut: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val saveStatus by viewModel.saveStatus.collectAsState()
+    val validationErrors by viewModel.validationErrors.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var isEditMode by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf("") }
+    var editedSkillsOffered by remember { mutableStateOf("") }
+    var editedSkillsNeeded by remember { mutableStateOf("") }
 
-    var name by remember { mutableStateOf("") }
-    var skillsOfferedText by remember { mutableStateOf("") }
-    var skillsNeededText by remember { mutableStateOf("") }
-
-    LaunchedEffect(uiState) {
-        if (uiState is Resource.Success) {
-            val user = (uiState as Resource.Success).data
-            name = user?.name ?: ""
-            skillsOfferedText = user?.skillsOffered?.joinToString(", ") ?: ""
-            skillsNeededText = user?.skillsNeeded?.joinToString(", ") ?: ""
-        }
-    }
-
+    // Handle save status
     LaunchedEffect(saveStatus) {
         when (saveStatus) {
             is Resource.Success -> {
-                snackbarHostState.showSnackbar("Profile updated successfully")
+                snackbarHostState.showSnackbar(
+                    "Profile updated successfully",
+                    duration = SnackbarDuration.Short
+                )
                 viewModel.resetSaveStatus()
+                isEditMode = false
             }
             is Resource.Error -> {
-                snackbarHostState.showSnackbar("Update failed: ${(saveStatus as Resource.Error).message}")
+                snackbarHostState.showSnackbar(
+                    "Error: ${(saveStatus as Resource.Error).message}",
+                    duration = SnackbarDuration.Long
+                )
                 viewModel.resetSaveStatus()
             }
             else -> {}
@@ -62,190 +59,266 @@ fun ProfileScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Profile Settings", style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(
+                        "Profile",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { /* Handle back */ }) {
+                        Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.signOut()
-                        onLogout()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = { /* Handle settings */ }) {
+                        Icon(Icons.Default.Settings, "Settings")
                     }
                 }
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             when (val state = uiState) {
-                is Resource.Loading -> FullScreenLoading()
+                is Resource.Loading -> {
+                    FullScreenLoading("Loading profile...")
+                }
                 is Resource.Error -> {
-                    Text(
-                        text = state.message ?: "Sync Error",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.error
+                    ErrorView(
+                        message = (state as Resource.Error).message ?: "Failed to load profile",
+                        onRetry = { /* Retry logic */ }
                     )
                 }
                 is Resource.Success -> {
-                    ProfileContent(
-                        user = state.data,
-                        name = name,
-                        onNameChange = { name = it },
-                        skillsOffered = skillsOfferedText,
-                        onOfferedChange = { skillsOfferedText = it },
-                        skillsNeeded = skillsNeededText,
-                        onNeededChange = { skillsNeededText = it },
-                        isSaving = saveStatus is Resource.Loading,
-                        onSave = {
-                            val offered = skillsOfferedText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                            val needed = skillsNeededText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                            viewModel.saveProfile(name, offered, needed)
-                        }
-                    )
+                    val user = state.data ?: return@Scaffold
+
+                    if (isEditMode) {
+                        EditProfileContent(
+                            user = user,
+                            editedName = editedName,
+                            editedSkillsOffered = editedSkillsOffered,
+                            editedSkillsNeeded = editedSkillsNeeded,
+                            onNameChange = { editedName = it },
+                            onSkillsOfferedChange = { editedSkillsOffered = it },
+                            onSkillsNeededChange = { editedSkillsNeeded = it },
+                            validationErrors = validationErrors,
+                            onSave = {
+                                val offered = editedSkillsOffered.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                val needed = editedSkillsNeeded.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                viewModel.saveProfile(
+                                    editedName,
+                                    offered,
+                                    needed
+                                )
+                            },
+                            onCancel = {
+                                isEditMode = false
+                                editedName = user.name
+                                editedSkillsOffered = user.skillsOffered.joinToString(", ")
+                                editedSkillsNeeded = user.skillsNeeded.joinToString(", ")
+                            },
+                            isSaving = saveStatus is Resource.Loading
+                        )
+                    } else {
+                        ViewProfileContent(
+                            user = user,
+                            onEditClick = {
+                                editedName = user.name
+                                editedSkillsOffered = user.skillsOffered.joinToString(", ")
+                                editedSkillsNeeded = user.skillsNeeded.joinToString(", ")
+                                isEditMode = true
+                            },
+                            onSignOut = onSignOut
+                        )
+                    }
+                }
+                else -> FullScreenLoading()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ViewProfileContent(
+    user: User,
+    onEditClick: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            ProfileCard(user = user, onEditClick = onEditClick)
+        }
+
+        item {
+            ScoreDisplayCard(
+                skillPoints = user.skillPoints,
+                trustScore = user.trustScore
+            )
+        }
+
+        item {
+            ExpandableSection(
+                title = "Skills Offered",
+                isExpanded = true,
+                onToggle = {}
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    user.skillsOffered.forEach { skill ->
+                        SkillChip(text = skill)
+                    }
+                    if (user.skillsOffered.isEmpty()) {
+                        Text(
+                            "No skills offered yet",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
-    }
-}
 
-@Composable
-fun ProfileContent(
-    user: User?,
-    name: String,
-    onNameChange: (String) -> Unit,
-    skillsOffered: String,
-    onOfferedChange: (String) -> Unit,
-    skillsNeeded: String,
-    onNeededChange: (String) -> Unit,
-    isSaving: Boolean,
-    onSave: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
-        // Stats Overview
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            StatCard(
-                label = "Trust Score",
-                value = "${user?.trustScore ?: 0}",
-                icon = Icons.Default.VerifiedUser,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Skill Points",
-                value = "${user?.skillPoints ?: 0}",
-                icon = Icons.Default.Token,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Personal Information",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        OutlinedTextField(
-            value = name,
-            onValueChange = onNameChange,
-            label = { Text("Full Name") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Skills & Expertise",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ProfileField(
-            value = skillsOffered,
-            onValueChange = onOfferedChange,
-            label = "Skills You Offer",
-            placeholder = "e.g. Gardening, Basic IT, Tailoring",
-            icon = Icons.Default.Handshake
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ProfileField(
-            value = skillsNeeded,
-            onValueChange = onNeededChange,
-            label = "Skills You Need",
-            placeholder = "e.g. English Speaking, Carpentry",
-            icon = Icons.Default.Psychology
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Button(
-            onClick = onSave,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = MaterialTheme.shapes.large,
-            enabled = !isSaving
-        ) {
-            if (isSaving) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp), 
-                    color = MaterialTheme.colorScheme.onPrimary, 
-                    strokeWidth = 3.dp
-                )
-            } else {
-                Text("Update Official Profile", style = MaterialTheme.typography.titleMedium)
+        item {
+            ExpandableSection(
+                title = "Skills Needed",
+                isExpanded = true,
+                onToggle = {}
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    user.skillsNeeded.forEach { skill ->
+                        SkillChip(text = skill)
+                    }
+                    if (user.skillsNeeded.isEmpty()) {
+                        Text(
+                            "No skills needed yet",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
-    }
-}
 
-@Composable
-fun StatCard(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.05f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.1f))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = color)
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = 0.7f))
+        item {
+            PremiumButton(
+                text = "Edit Profile",
+                onClick = onEditClick,
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        item {
+            OutlinedPremiumButton(
+                text = "Sign Out",
+                onClick = onSignOut,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-fun ProfileField(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String, icon: ImageVector) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        leadingIcon = { Icon(icon, contentDescription = null) },
-        supportingText = { Text("Use commas to separate multiple skills") }
-    )
+private fun EditProfileContent(
+    user: User,
+    editedName: String,
+    editedSkillsOffered: String,
+    editedSkillsNeeded: String,
+    onNameChange: (String) -> Unit,
+    onSkillsOfferedChange: (String) -> Unit,
+    onSkillsNeededChange: (String) -> Unit,
+    validationErrors: Map<String, String>,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    isSaving: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Text(
+                "Edit Profile",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        item {
+            PremiumTextField(
+                value = editedName,
+                onValueChange = onNameChange,
+                label = "Full Name",
+                isError = validationErrors.containsKey("name"),
+                errorText = validationErrors["name"] ?: ""
+            )
+        }
+
+        item {
+            PremiumTextField(
+                value = editedSkillsOffered,
+                onValueChange = onSkillsOfferedChange,
+                label = "Skills Offered",
+                placeholder = "Separate with commas",
+                maxLines = 3,
+                isError = validationErrors.containsKey("skillsOffered"),
+                errorText = validationErrors["skillsOffered"] ?: ""
+            )
+        }
+
+        item {
+            PremiumTextField(
+                value = editedSkillsNeeded,
+                onValueChange = onSkillsNeededChange,
+                label = "Skills Needed",
+                placeholder = "Separate with commas",
+                maxLines = 3,
+                isError = validationErrors.containsKey("skillsNeeded"),
+                errorText = validationErrors["skillsNeeded"] ?: ""
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedPremiumButton(
+                    text = "Cancel",
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                    enabled = !isSaving
+                )
+                PremiumButton(
+                    text = "Save Changes",
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f),
+                    isLoading = isSaving
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
 }

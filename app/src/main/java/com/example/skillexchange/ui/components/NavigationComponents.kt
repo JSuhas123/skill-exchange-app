@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 /**
  * Premium Navigation Rail for side navigation
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumNavigationRail(
     selectedItem: Int,
@@ -59,6 +60,7 @@ fun PremiumNavigationRail(
 /**
  * Premium Bottom Navigation Bar
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumNavigationBar(
     selectedItem: Int,
@@ -104,6 +106,7 @@ data class NavigationItem(
 /**
  * Premium Top App Bar with search
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumTopAppBar(
     title: String,

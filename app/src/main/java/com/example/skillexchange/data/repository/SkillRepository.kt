@@ -28,7 +28,7 @@ class SkillRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync skills")
-                        trySend(Resource.Error(error.message ?: "Failed to sync skills", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync skills"))
                         return@addSnapshotListener
                     }
                     snapshot?.let {
@@ -44,7 +44,8 @@ class SkillRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up skills listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
     
@@ -59,7 +60,7 @@ class SkillRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync skills for category $category")
-                        trySend(Resource.Error(error.message ?: "Failed to sync skills", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync skills"))
                         return@addSnapshotListener
                     }
                     snapshot?.let {
@@ -75,7 +76,8 @@ class SkillRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up category skills listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
 

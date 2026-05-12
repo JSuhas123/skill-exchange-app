@@ -39,7 +39,7 @@ class PostRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync posts")
-                        trySend(Resource.Error(error.message ?: "Failed to sync posts", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync posts"))
                         return@addSnapshotListener
                     }
                     snapshot?.let {
@@ -55,7 +55,8 @@ class PostRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up posts listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
     
@@ -70,7 +71,7 @@ class PostRepository @Inject constructor(
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Timber.e(error, "Failed to sync posts for user $userId")
-                        trySend(Resource.Error(error.message ?: "Failed to sync posts", error))
+                        trySend(Resource.Error(error.message ?: "Failed to sync posts"))
                         return@addSnapshotListener
                     }
                     snapshot?.let {
@@ -86,7 +87,8 @@ class PostRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error setting up user posts listener")
-            emit(Resource.Error(e.message ?: "Error setting up listener", e))
+            trySend(Resource.Error(e.message ?: "Error setting up listener"))
+            close(e)
         }
     }
     

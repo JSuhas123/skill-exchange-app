@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -86,7 +87,7 @@ fun OutlinedPremiumButton(
         modifier = modifier.height(48.dp),
         enabled = enabled && !isLoading,
         shape = MaterialTheme.shapes.medium,
-        colors = OutlinedButtonDefaults.outlinedButtonColors(
+        colors = ButtonDefaults.outlinedButtonColors(
             disabledContainerColor = MaterialTheme.colorScheme.surface
         )
     ) {
@@ -259,8 +260,8 @@ fun PostCard(
                     )
                     Text(
                         text = post.timestamp.let { ts ->
-                            val daysAgo = (System.currentTimeMillis() - ts) / (1000 * 60 * 60 * 24)
-                            if (daysAgo > 0) "$daysAgo days ago" else "Today"
+                            val daysAgo = (System.currentTimeMillis() - ts.toDate().time) / (1000L * 60 * 60 * 24)
+                            if (daysAgo > 0L) "$daysAgo days ago" else "Today"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -448,7 +449,7 @@ fun ScoreDisplayCard(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)
         )
-        Divider(
+        HorizontalDivider(
             modifier = Modifier
                 .width(1.dp)
                 .height(60.dp)

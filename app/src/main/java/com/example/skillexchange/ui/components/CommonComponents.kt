@@ -1,6 +1,9 @@
 package com.example.skillexchange.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -79,7 +82,7 @@ fun SearchBar(
         shape = MaterialTheme.shapes.medium,
         leadingIcon = {
             Icon(
-                imageVector = androidx.compose.material.icons.filled.Search,
+                imageVector = Icons.Default.Search,
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -88,7 +91,7 @@ fun SearchBar(
             {
                 IconButton(onClick = onClear) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.filled.Clear,
+                        imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

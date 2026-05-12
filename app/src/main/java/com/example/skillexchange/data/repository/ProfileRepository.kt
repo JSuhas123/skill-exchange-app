@@ -50,15 +50,10 @@ class ProfileRepository @Inject constructor(
     }
     
     suspend fun updateProfilePicture(userId: String, imageUri: Uri): Result<Unit> = runCatching {
-        uploadProfileImage(userId, imageUri)
-            .onSuccess { downloadUrl ->
-                val userRef = usersCollection.document(userId)
-                userRef.update("profilePictureUrl", downloadUrl).await()
-                Timber.d("Profile picture URL updated")
-            }
-            .onFailure { e ->
-                throw e
-            }
+        val downloadUrl = uploadProfileImage(userId, imageUri).getOrThrow()
+        val userRef = usersCollection.document(userId)
+        userRef.update("profilePictureUrl", downloadUrl).await()
+        Timber.d("Profile picture URL updated")
     }.onFailure { e ->
         Timber.e(e, "Failed to update profile picture")
     }

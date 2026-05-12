@@ -21,16 +21,16 @@ class DashboardViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _userState = MutableStateFlow<Resource<User>>(Resource.Loading())
-    val userState: StateFlow<Resource<User>> = _userState.asStateFlow()
+    val currentUser: StateFlow<Resource<User>> = _userState.asStateFlow()
 
-    private val _completedSwaps = MutableStateFlow<Resource<List<Swap>>>(Resource.Loading())
-    val completedSwaps: StateFlow<Resource<List<Swap>>> = _completedSwaps.asStateFlow()
+    private val _recentActivity = MutableStateFlow<Resource<List<String>>>(Resource.Loading())
+    val recentActivity: StateFlow<Resource<List<String>>> = _recentActivity.asStateFlow()
 
     init {
-        loadDashboardData()
+        refreshDashboard()
     }
 
-    fun loadDashboardData() {
+    fun refreshDashboard() {
         val userId = authRepository.currentUser?.uid ?: run {
             _userState.value = Resource.Error("User not authenticated")
             return
@@ -52,12 +52,19 @@ class DashboardViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            _recentActivity.value = Resource.Loading()
             swapRepository.getSwapsForUser(userId).collect { resource ->
-                if (resource is Resource.Success) {
-                    val completed = resource.data?.filter { it.status == "completed" } ?: emptyList()
-                    _completedSwaps.value = Resource.Success(completed)
-                } else {
-                    _completedSwaps.value = resource
+                when (resource) {
+                    is Resource.Success -> {
+                        val activities = resource.data?.map { swap ->
+                            "Swap ${swap.status}: ${swap.skillA} for ${swap.skillB}"
+                        } ?: emptyList()
+                        _recentActivity.value = Resource.Success(activities)
+                    }
+                    is Resource.Error -> {
+                        _recentActivity.value = Resource.Error(resource.message ?: "Failed to load activity")
+                    }
+                    else -> {}
                 }
             }
         }
