@@ -13,3 +13,18 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Sensitive configuration and secrets
+app/google-services.json
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.jks
+*.keystore
+*.p12
+*.pfx
+service-account*.json
+*-service-account.json
+firebase-adminsdk*.json
