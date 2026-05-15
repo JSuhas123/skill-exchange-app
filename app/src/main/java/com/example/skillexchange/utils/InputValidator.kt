@@ -20,6 +20,10 @@ object InputValidator {
     fun isValidHours(hours: Int): Boolean {
         return hours in 1..168
     }
+
+    fun isValidPhoneNumber(phoneNumber: String): Boolean {
+        return phoneNumber.matches(Regex("^\\+?[1-9]\\d{9,14}$"))
+    }
     
     fun parseSkillList(input: String): List<String> {
         return input.split(",")

@@ -30,7 +30,7 @@
       "fields": [
         {
           "fieldPath": "users",
-          "order": "ASCENDING"
+          "arrayConfig": "CONTAINS"
         },
         {
           "fieldPath": "timestamp",

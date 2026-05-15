@@ -1,15 +1,21 @@
 package com.example.skillexchange.data.repository
 
+import android.app.Activity
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.TimeUnit
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -73,8 +79,50 @@ class AuthRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    fun startPhoneNumberVerification(
+        activity: Activity,
+        phoneNumber: String,
+        callbacks: PhoneAuthProvider.OnVerificationStateChangedCallbacks
+    ) {
+        val options = PhoneAuthOptions.newBuilder(firebaseAuth)
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(activity)
+            .setCallbacks(callbacks)
+            .build()
+        PhoneAuthProvider.verifyPhoneNumber(options)
+    }
+
+    suspend fun signInWithPhoneCredential(
+        credential: PhoneAuthCredential,
+        userName: String,
+        phoneNumber: String
+    ): Result<FirebaseUser?> {
+        return try {
+            val result = firebaseAuth.signInWithCredential(credential).await()
+            val user = result.user
+            if (user != null) {
+                dataStore.edit { preferences ->
+                    preferences[sessionIdKey] = user.uid
+                    preferences[userIdKey] = user.uid
+                }
+                ensureUserExists(user.uid, userName, phoneNumber).getOrThrow()
+                Result.success(user)
+            } else {
+                Result.failure(Exception("Phone sign in returned null user"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Phone sign in failed")
+            Result.failure(e)
+        }
+    }
     
-    suspend fun ensureUserExists(userId: String, userName: String = "Anonymous"): Result<Unit> {
+    suspend fun ensureUserExists(
+        userId: String,
+        userName: String = "Anonymous",
+        phoneNumber: String = ""
+    ): Result<Unit> {
         return try {
             val userRef = firestore.collection("users").document(userId)
             val snapshot = userRef.get().await()
@@ -84,6 +132,7 @@ class AuthRepository @Inject constructor(
                     "id" to userId,
                     "name" to userName,
                     "email" to "",
+                    "phoneNumber" to phoneNumber,
                     "skillsOffered" to emptyList<String>(),
                     "skillsNeeded" to emptyList<String>(),
                     "trustScore" to 0,
@@ -92,6 +141,19 @@ class AuthRepository @Inject constructor(
                 )
                 userRef.set(userData).await()
                 Timber.d("Created user profile for $userId")
+            } else {
+                val updates = mutableMapOf<String, Any>()
+                val existingName = snapshot.getString("name").orEmpty()
+                val existingPhone = snapshot.getString("phoneNumber").orEmpty()
+                if (existingName.isBlank() && userName.isNotBlank()) {
+                    updates["name"] = userName
+                }
+                if (existingPhone.isBlank() && phoneNumber.isNotBlank()) {
+                    updates["phoneNumber"] = phoneNumber
+                }
+                if (updates.isNotEmpty()) {
+                    userRef.set(updates, SetOptions.merge()).await()
+                }
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -122,8 +184,8 @@ class AuthRepository @Inject constructor(
                 Timber.d("Session recovered for user ${user.uid}")
                 Result.success(user)
             } else {
-                Timber.d("No session to recover, attempting anonymous sign in")
-                signInAnonymously()
+                Timber.d("No session to recover")
+                Result.failure(IllegalStateException("No active session"))
             }
         } catch (e: Exception) {
             Timber.e(e, "Session recovery failed")
