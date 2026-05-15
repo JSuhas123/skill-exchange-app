@@ -1,11 +1,13 @@
 package com.example.skillexchange.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -24,6 +26,12 @@ fun LoginScreen(
     val currentUser by viewModel.currentUser.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isCodeSent by viewModel.isCodeSent.collectAsState()
+    val context = LocalContext.current
+    val activity = context as? Activity
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
@@ -92,55 +100,97 @@ fun LoginScreen(
                 lineHeight = 26.sp
             )
 
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp),
-                    strokeWidth = 4.dp
+            OutlinedTextField(
+                value = name,
+                onValueChange = {
+                    name = it
+                    viewModel.clearError()
+                },
+                label = { Text("Full Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = phone,
+                onValueChange = {
+                    phone = it
+                    viewModel.clearError()
+                },
+                label = { Text("Phone (+country code)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (isCodeSent) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = otp,
+                    onValueChange = {
+                        otp = it
+                        viewModel.clearError()
+                    },
+                    label = { Text("SMS Code") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Establishing Secure Session",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            } else if (error != null) {
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (error != null) {
                 Text(
                     text = error ?: "Authentication Error",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { viewModel.signInAnonymously() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Text("Retry Login")
-                }
-            } else {
-                Button(
-                    onClick = { viewModel.signInAnonymously() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.large,
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                ) {
-                    Text(
-                        text = "Enter Platform",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
+
+            Button(
+                onClick = {
+                    activity?.let {
+                        if (isCodeSent) {
+                            viewModel.verifyCode(otp)
+                        } else {
+                            viewModel.sendVerificationCode(name, phone, it)
+                        }
+                    }
+                },
+                enabled = !isLoading && activity != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Text(
+                    text = if (isCodeSent) "Verify SMS Code" else "Send SMS Code",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                text = "Secure Anonymous Access Enabled",
+                text = if (activity == null) {
+                    "Phone login unavailable in this context"
+                } else {
+                    "Login with name + phone verification"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
             )

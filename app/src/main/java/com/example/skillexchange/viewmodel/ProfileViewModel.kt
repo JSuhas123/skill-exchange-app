@@ -77,10 +77,10 @@ class ProfileViewModel @Inject constructor(
         if (!InputValidator.isValidName(name)) {
             errors["name"] = "Name must be 2-100 characters"
         }
-        if (!InputValidator.isValidSkillList(skillsOffered)) {
-            errors["skillsOffered"] = "Add at least one valid skill"
+        if (skillsOffered.any { !InputValidator.isValidSkill(it) }) {
+            errors["skillsOffered"] = "Invalid skills in offered list"
         }
-        if (skillsNeeded.isNotEmpty() && !InputValidator.isValidSkillList(skillsNeeded)) {
+        if (skillsNeeded.any { !InputValidator.isValidSkill(it) }) {
             errors["skillsNeeded"] = "Invalid skills in needed list"
         }
         
@@ -98,7 +98,8 @@ class ProfileViewModel @Inject constructor(
             val user = User(
                 id = userId,
                 name = name,
-                email = authRepository.currentUser?.email ?: "",
+                email = currentUser?.email ?: authRepository.currentUser?.email.orEmpty(),
+                phoneNumber = currentUser?.phoneNumber.orEmpty(),
                 skillsOffered = skillsOffered,
                 skillsNeeded = skillsNeeded,
                 trustScore = currentUser?.trustScore ?: 0,

@@ -1,14 +1,19 @@
 package com.example.skillexchange.viewmodel
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skillexchange.data.repository.AuthRepository
 import com.example.skillexchange.utils.ErrorHandler
+import com.example.skillexchange.utils.InputValidator
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -17,6 +22,15 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+    private data class PendingVerification(
+        val verificationId: String? = null,
+        val name: String = "",
+        val phone: String = ""
+    )
+
+    private companion object {
+        const val OTP_LENGTH = 6
+    }
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(authRepository.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
@@ -30,10 +44,14 @@ class AuthViewModel @Inject constructor(
     private val _isAuthenticated = MutableStateFlow(authRepository.currentUser != null)
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
+    private val _isCodeSent = MutableStateFlow(false)
+    val isCodeSent: StateFlow<Boolean> = _isCodeSent.asStateFlow()
+    private val pendingVerification = MutableStateFlow(PendingVerification())
+
     init {
         initializeAuth()
     }
-    
+
     private fun initializeAuth() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -52,10 +70,15 @@ class AuthViewModel @Inject constructor(
                     authRepository.recoverSession()
                         .onSuccess { user ->
                             _currentUser.value = user
-                            _isAuthenticated.value = true
-                            Timber.d("Session recovered")
+                            _isAuthenticated.value = user != null
+                            if (user != null) {
+                                Timber.d("Session recovered")
+                            } else {
+                                Timber.d("No existing session")
+                            }
                         }
                         .onFailure { e ->
+                            _isAuthenticated.value = false
                             _error.value = ErrorHandler.getErrorMessage(e)
                             Timber.e(e, "Failed to recover session")
                         }
@@ -69,53 +92,104 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun signInAnonymously() {
+    fun sendVerificationCode(name: String, phoneNumber: String, activity: Activity) {
         if (_isLoading.value) return
-        
+        if (!InputValidator.isValidName(name)) {
+            _error.value = "Name must be 2-100 characters"
+            return
+        }
+        if (!InputValidator.isValidPhoneNumber(phoneNumber)) {
+            _error.value = "Enter a valid phone number with country code"
+            return
+        }
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            
-            authRepository.signInAnonymously()
-                .onSuccess { user ->
-                    _currentUser.value = user
-                    _isAuthenticated.value = user != null
-                    Timber.d("Anonymous sign in successful")
-                }
-                .onFailure { e ->
-                    _error.value = ErrorHandler.getErrorMessage(e)
-                    _isAuthenticated.value = false
-                    Timber.e(e, "Anonymous sign in failed")
-                    
-                    // Retry once if it's a network error
-                    if (ErrorHandler.isRetryableError(e)) {
-                        retrySignIn()
+
+            pendingVerification.value = PendingVerification(
+                verificationId = null,
+                name = name.trim(),
+                phone = phoneNumber.trim()
+            )
+
+            val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                    viewModelScope.launch {
+                        val pending = pendingVerification.value
+                        authRepository.signInWithPhoneCredential(
+                            credential = credential,
+                            userName = pending.name,
+                            phoneNumber = pending.phone
+                        ).onSuccess { user ->
+                            _currentUser.value = user
+                            _isAuthenticated.value = user != null
+                            _isCodeSent.value = false
+                            _error.value = null
+                        }.onFailure { e ->
+                            _error.value = ErrorHandler.getErrorMessage(e)
+                            _isAuthenticated.value = false
+                        }
+                        _isLoading.value = false
                     }
                 }
-            
-            _isLoading.value = false
+
+                override fun onVerificationFailed(e: Exception) {
+                    _error.value = ErrorHandler.getErrorMessage(e)
+                    _isAuthenticated.value = false
+                    _isLoading.value = false
+                }
+
+                override fun onCodeSent(
+                    newVerificationId: String,
+                    token: PhoneAuthProvider.ForceResendingToken
+                ) {
+                    pendingVerification.update { it.copy(verificationId = newVerificationId) }
+                    _isCodeSent.value = true
+                    _isLoading.value = false
+                }
+            }
+
+            authRepository.startPhoneNumberVerification(
+                activity = activity,
+                phoneNumber = pendingVerification.value.phone,
+                callbacks = callbacks
+            )
         }
     }
-    
-    private fun retrySignIn() {
+
+    fun verifyCode(code: String) {
+        if (_isLoading.value) return
+        val pending = pendingVerification.value
+        val currentVerificationId = pending.verificationId
+        if (currentVerificationId.isNullOrBlank()) {
+            _error.value = "Please request OTP first"
+            return
+        }
+        if (!code.trim().matches(Regex("^\\d{$OTP_LENGTH}$"))) {
+            _error.value = "Enter a valid $OTP_LENGTH-digit OTP"
+            return
+        }
+
         viewModelScope.launch {
-            Timber.d("Retrying anonymous sign in")
             _isLoading.value = true
-            
-            kotlinx.coroutines.delay(1000) // Wait 1 second before retry
-            
-            authRepository.signInAnonymously()
-                .onSuccess { user ->
-                    _currentUser.value = user
-                    _isAuthenticated.value = user != null
-                    _error.value = null
-                    Timber.d("Retry successful")
-                }
-                .onFailure { e ->
-                    _error.value = "Connection failed. Please check your internet and try again."
-                    Timber.e(e, "Retry failed")
-                }
-            
+            _error.value = null
+
+            val credential = PhoneAuthProvider.getCredential(currentVerificationId, code.trim())
+            authRepository.signInWithPhoneCredential(
+                credential = credential,
+                userName = pending.name,
+                phoneNumber = pending.phone
+            ).onSuccess { user ->
+                _currentUser.value = user
+                _isAuthenticated.value = user != null
+                _isCodeSent.value = false
+                _error.value = null
+            }.onFailure { e ->
+                _error.value = ErrorHandler.getErrorMessage(e)
+                _isAuthenticated.value = false
+            }
+
             _isLoading.value = false
         }
     }
@@ -126,6 +200,8 @@ class AuthViewModel @Inject constructor(
                 .onSuccess {
                     _currentUser.value = null
                     _isAuthenticated.value = false
+                    _isCodeSent.value = false
+                    pendingVerification.value = PendingVerification()
                     _error.value = null
                     Timber.d("Sign out successful")
                 }
