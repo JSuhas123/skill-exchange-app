@@ -26,6 +26,10 @@ class AuthRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val dataStore: DataStore<Preferences>
 ) {
+    private companion object {
+        const val PHONE_VERIFICATION_TIMEOUT_SECONDS = 60L
+    }
+
     private val sessionIdKey = stringPreferencesKey("session_id")
     private val userIdKey = stringPreferencesKey("user_id")
     
@@ -87,7 +91,7 @@ class AuthRepository @Inject constructor(
     ) {
         val options = PhoneAuthOptions.newBuilder(firebaseAuth)
             .setPhoneNumber(phoneNumber)
-            .setTimeout(60L, TimeUnit.SECONDS)
+            .setTimeout(PHONE_VERIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .setActivity(activity)
             .setCallbacks(callbacks)
             .build()

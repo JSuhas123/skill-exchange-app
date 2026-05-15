@@ -21,6 +21,9 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+    private companion object {
+        const val OTP_LENGTH = 6
+    }
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(authRepository.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
@@ -149,7 +152,7 @@ class AuthViewModel @Inject constructor(
             _error.value = "Please request OTP first"
             return
         }
-        if (code.length != 6) {
+        if (code.length != OTP_LENGTH) {
             _error.value = "Enter a valid 6-digit OTP"
             return
         }

@@ -28,6 +28,7 @@ fun LoginScreen(
     val error by viewModel.error.collectAsState()
     val isCodeSent by viewModel.isCodeSent.collectAsState()
     val context = LocalContext.current
+    val hostActivity = context as? Activity
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
@@ -153,8 +154,7 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    val activity = context as? Activity
-                    if (activity != null) {
+                    hostActivity?.let { activity ->
                         if (isCodeSent) {
                             viewModel.verifyCode(otp)
                         } else {
@@ -162,7 +162,7 @@ fun LoginScreen(
                         }
                     }
                 },
-                enabled = !isLoading && context is Activity,
+                enabled = !isLoading && hostActivity != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -186,7 +186,11 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Login with name + phone verification",
+                text = if (hostActivity == null) {
+                    "Phone login unavailable in this context"
+                } else {
+                    "Login with name + phone verification"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
             )
