@@ -67,11 +67,16 @@ class AuthViewModel @Inject constructor(
                         .onSuccess { user ->
                             _currentUser.value = user
                             _isAuthenticated.value = user != null
-                            Timber.d("Session recovered")
+                            if (user != null) {
+                                Timber.d("Session recovered")
+                            } else {
+                                Timber.d("No existing session")
+                            }
                         }
                         .onFailure { e ->
                             _isAuthenticated.value = false
-                            Timber.d("No existing session to recover")
+                            _error.value = ErrorHandler.getErrorMessage(e)
+                            Timber.e(e, "Failed to recover session")
                         }
                 }
             } catch (e: Exception) {
@@ -153,7 +158,7 @@ class AuthViewModel @Inject constructor(
             return
         }
         if (code.length != OTP_LENGTH) {
-            _error.value = "Enter a valid 6-digit OTP"
+            _error.value = "Enter a valid $OTP_LENGTH-digit OTP"
             return
         }
 

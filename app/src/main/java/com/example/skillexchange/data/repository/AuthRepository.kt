@@ -189,7 +189,7 @@ class AuthRepository @Inject constructor(
                 Result.success(user)
             } else {
                 Timber.d("No session to recover")
-                Result.failure(IllegalStateException("No active session"))
+                Result.success(null)
             }
         } catch (e: Exception) {
             Timber.e(e, "Session recovery failed")
