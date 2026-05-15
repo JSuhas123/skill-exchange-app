@@ -120,7 +120,7 @@ fun LoginScreen(
                     phone = it
                     viewModel.clearError()
                 },
-                label = { Text("Phone (+countrycode)") },
+                label = { Text("Phone (+country code)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

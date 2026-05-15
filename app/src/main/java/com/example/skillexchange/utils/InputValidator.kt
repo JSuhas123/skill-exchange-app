@@ -21,6 +21,7 @@ object InputValidator {
         return hours in 1..168
     }
 
+    /** Accepts E.164-like input: optional '+' prefix, first digit 1-9, total 10-15 digits. */
     fun isValidPhoneNumber(phoneNumber: String): Boolean {
         return phoneNumber.matches(Regex("^\\+?[1-9]\\d{9,14}$"))
     }

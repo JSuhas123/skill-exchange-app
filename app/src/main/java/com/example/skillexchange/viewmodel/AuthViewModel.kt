@@ -149,7 +149,7 @@ class AuthViewModel @Inject constructor(
             _error.value = "Please request OTP first"
             return
         }
-        if (code.length < 6) {
+        if (code.length != 6) {
             _error.value = "Enter a valid 6-digit OTP"
             return
         }
