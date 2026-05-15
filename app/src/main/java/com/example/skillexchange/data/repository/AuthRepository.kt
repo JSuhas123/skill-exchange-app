@@ -149,10 +149,10 @@ class AuthRepository @Inject constructor(
                 val updates = mutableMapOf<String, Any>()
                 val existingName = snapshot.getString("name").orEmpty()
                 val existingPhone = snapshot.getString("phoneNumber").orEmpty()
-                if (existingName.isBlank() && userName.isNotBlank()) {
+                if (userName.isNotBlank() && existingName != userName) {
                     updates["name"] = userName
                 }
-                if (existingPhone.isBlank() && phoneNumber.isNotBlank()) {
+                if (phoneNumber.isNotBlank() && existingPhone != phoneNumber) {
                     updates["phoneNumber"] = phoneNumber
                 }
                 if (updates.isNotEmpty()) {

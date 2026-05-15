@@ -166,7 +166,7 @@ class AuthViewModel @Inject constructor(
             _error.value = "Please request OTP first"
             return
         }
-        if (code.length != OTP_LENGTH) {
+        if (!code.trim().matches(Regex("^\\d{$OTP_LENGTH}$"))) {
             _error.value = "Enter a valid $OTP_LENGTH-digit OTP"
             return
         }
