@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -21,6 +22,12 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+    private data class PendingVerification(
+        val verificationId: String? = null,
+        val name: String = "",
+        val phone: String = ""
+    )
+
     private companion object {
         const val OTP_LENGTH = 6
     }
@@ -39,14 +46,11 @@ class AuthViewModel @Inject constructor(
 
     private val _isCodeSent = MutableStateFlow(false)
     val isCodeSent: StateFlow<Boolean> = _isCodeSent.asStateFlow()
+    private val pendingVerification = MutableStateFlow(PendingVerification())
 
     init {
         initializeAuth()
     }
-    
-    private var verificationId: String? = null
-    private var pendingName: String = ""
-    private var pendingPhone: String = ""
 
     private fun initializeAuth() {
         viewModelScope.launch {
@@ -103,16 +107,20 @@ class AuthViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
 
-            pendingName = name.trim()
-            pendingPhone = phoneNumber.trim()
+            pendingVerification.value = PendingVerification(
+                verificationId = null,
+                name = name.trim(),
+                phone = phoneNumber.trim()
+            )
 
             val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                     viewModelScope.launch {
+                        val pending = pendingVerification.value
                         authRepository.signInWithPhoneCredential(
                             credential = credential,
-                            userName = pendingName,
-                            phoneNumber = pendingPhone
+                            userName = pending.name,
+                            phoneNumber = pending.phone
                         ).onSuccess { user ->
                             _currentUser.value = user
                             _isAuthenticated.value = user != null
@@ -136,7 +144,7 @@ class AuthViewModel @Inject constructor(
                     newVerificationId: String,
                     token: PhoneAuthProvider.ForceResendingToken
                 ) {
-                    verificationId = newVerificationId
+                    pendingVerification.update { it.copy(verificationId = newVerificationId) }
                     _isCodeSent.value = true
                     _isLoading.value = false
                 }
@@ -144,7 +152,7 @@ class AuthViewModel @Inject constructor(
 
             authRepository.startPhoneNumberVerification(
                 activity = activity,
-                phoneNumber = pendingPhone,
+                phoneNumber = pendingVerification.value.phone,
                 callbacks = callbacks
             )
         }
@@ -152,7 +160,8 @@ class AuthViewModel @Inject constructor(
 
     fun verifyCode(code: String) {
         if (_isLoading.value) return
-        val currentVerificationId = verificationId
+        val pending = pendingVerification.value
+        val currentVerificationId = pending.verificationId
         if (currentVerificationId.isNullOrBlank()) {
             _error.value = "Please request OTP first"
             return
@@ -169,8 +178,8 @@ class AuthViewModel @Inject constructor(
             val credential = PhoneAuthProvider.getCredential(currentVerificationId, code.trim())
             authRepository.signInWithPhoneCredential(
                 credential = credential,
-                userName = pendingName,
-                phoneNumber = pendingPhone
+                userName = pending.name,
+                phoneNumber = pending.phone
             ).onSuccess { user ->
                 _currentUser.value = user
                 _isAuthenticated.value = user != null
@@ -192,9 +201,7 @@ class AuthViewModel @Inject constructor(
                     _currentUser.value = null
                     _isAuthenticated.value = false
                     _isCodeSent.value = false
-                    verificationId = null
-                    pendingName = ""
-                    pendingPhone = ""
+                    pendingVerification.value = PendingVerification()
                     _error.value = null
                     Timber.d("Sign out successful")
                 }
