@@ -16,19 +16,31 @@ android {
         applicationId = "com.example.skillexchange"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.09"
+        versionCode = 20
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("${System.getProperty("user.home")}/.android/skillexchange.keystore")
+            storePassword = "skillexchange"
+            keyAlias = "skillexchange"
+            keyPassword = "skillexchange"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            isDebuggable = false
         }
     }
     compileOptions {

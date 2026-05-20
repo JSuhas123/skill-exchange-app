@@ -9,6 +9,7 @@ import com.example.skillexchange.utils.InputValidator
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.FirebaseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -134,7 +135,7 @@ class AuthViewModel @Inject constructor(
                     }
                 }
 
-                override fun onVerificationFailed(e: Exception) {
+                override fun onVerificationFailed(e: FirebaseException) {
                     _error.value = ErrorHandler.getErrorMessage(e)
                     _isAuthenticated.value = false
                     _isLoading.value = false
