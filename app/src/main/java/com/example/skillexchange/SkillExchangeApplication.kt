@@ -12,13 +12,32 @@ class SkillExchangeApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize logging
-        ProductionLogger.init(isDebug = BuildConfig.DEBUG)
+        // Set global exception handler to prevent crashes
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("SkillExchange", "Uncaught exception in thread: ${thread.name}", throwable)
+            // Let the default handler also process it
+            kotlin.system.exitProcess(1)
+        }
         
-        // Enable Firebase Analytics
-        Firebase.analytics.setAnalyticsCollectionEnabled(true)
+        try {
+            // Initialize logging with error handling
+            ProductionLogger.init(isDebug = BuildConfig.DEBUG)
+        } catch (e: Exception) {
+            android.util.Log.e("SkillExchange", "Failed to initialize logging", e)
+        }
         
-        // Enable Crashlytics
-        Firebase.crashlytics.setCrashlyticsCollectionEnabled(true)
+        try {
+            // Enable Firebase Analytics
+            Firebase.analytics.setAnalyticsCollectionEnabled(true)
+        } catch (e: Exception) {
+            android.util.Log.e("SkillExchange", "Failed to enable Firebase Analytics", e)
+        }
+        
+        try {
+            // Enable Crashlytics
+            Firebase.crashlytics.setCrashlyticsCollectionEnabled(true)
+        } catch (e: Exception) {
+            android.util.Log.e("SkillExchange", "Failed to enable Firebase Crashlytics", e)
+        }
     }
 }
