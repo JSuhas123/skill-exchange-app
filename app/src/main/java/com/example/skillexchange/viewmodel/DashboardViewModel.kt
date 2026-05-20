@@ -27,11 +27,21 @@ class DashboardViewModel @Inject constructor(
     val recentActivity: StateFlow<Resource<List<String>>> = _recentActivity.asStateFlow()
 
     init {
-        refreshDashboard()
+        // Only refresh if user is available to prevent crashes during initialization
+        try {
+            if (authRepository.currentUser != null) {
+                refreshDashboard()
+            } else {
+                _userState.value = Resource.Error("Waiting for authentication...")
+            }
+        } catch (e: Exception) {
+            _userState.value = Resource.Error("Failed to initialize: ${e.message}")
+        }
     }
 
     fun refreshDashboard() {
-        val userId = authRepository.currentUser?.uid ?: run {
+        val userId = authRepository.currentUser?.uid
+        if (userId == null) {
             _userState.value = Resource.Error("User not authenticated")
             return
         }

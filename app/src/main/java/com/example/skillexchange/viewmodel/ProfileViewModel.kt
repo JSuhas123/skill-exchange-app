@@ -37,7 +37,14 @@ class ProfileViewModel @Inject constructor(
     val validationErrors: StateFlow<Map<String, String>> = _validationErrors.asStateFlow()
 
     init {
-        fetchUserProfile()
+        // Only fetch profile if auth is ready to prevent crashes during init
+        try {
+            if (authRepository.currentUser != null) {
+                fetchUserProfile()
+            }
+        } catch (e: Exception) {
+            _uiState.value = Resource.Error("Auth initialization in progress...")
+        }
     }
 
     fun fetchUserProfile() {

@@ -26,7 +26,8 @@ class ChatViewModel @Inject constructor(
     private val _messages = MutableStateFlow<Resource<List<Message>>>(Resource.Idle())
     val messages: StateFlow<Resource<List<Message>>> = _messages.asStateFlow()
 
-    val currentUserId = authRepository.currentUser?.uid ?: ""
+    val currentUserId: String
+        get() = authRepository.currentUser?.uid ?: ""
 
     fun listenForMessages(threadId: String) {
         viewModelScope.launch {

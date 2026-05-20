@@ -15,7 +15,7 @@ android {
     defaultConfig {
         applicationId = "com.example.skillexchange"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 20
         versionName = "2.0"
 

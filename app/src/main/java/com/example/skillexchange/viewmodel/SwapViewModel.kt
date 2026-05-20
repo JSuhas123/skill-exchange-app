@@ -19,7 +19,8 @@ class SwapViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    val currentUserId = authRepository.currentUser?.uid ?: ""
+    val currentUserId: String
+        get() = authRepository.currentUser?.uid ?: ""
 
     private val _swaps = MutableStateFlow<Resource<List<Swap>>>(Resource.Loading())
     val swaps: StateFlow<Resource<List<Swap>>> = _swaps.asStateFlow()
@@ -34,7 +35,10 @@ class SwapViewModel @Inject constructor(
     val validationErrors: StateFlow<Map<String, String>> = _validationErrors.asStateFlow()
 
     init {
-        fetchSwaps()
+        // Only fetch if authenticated
+        if (authRepository.currentUser != null) {
+            fetchSwaps()
+        }
     }
 
     fun fetchSwaps() {
